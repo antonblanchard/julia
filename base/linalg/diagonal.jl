@@ -118,8 +118,6 @@ for uplo in (:LowerTriangular, :UpperTriangular)
         end
     end
 end
-# (*)(A::AbstractTriangular, D::Diagonal) =
-    # error("this method should never get called. Please make a bug report.")
 *(A::AbstractMatrix, D::Diagonal) =
     scale!(similar(A, promote_op(*, eltype(A), eltype(D.diag))), A, D.diag)
 *(D::Diagonal, A::AbstractMatrix) =
