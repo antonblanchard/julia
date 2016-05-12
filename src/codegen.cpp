@@ -1405,7 +1405,7 @@ static logdata_t coverageData;
 static void coverageVisitLine(StringRef filename, int line)
 {
     assert(!imaging_mode);
-    if (filename == "" || filename == "none" || filename == "no file" || line < 0)
+    if (filename == "" || filename == "none" || filename == "no file" || filename == "<missing>" || line < 0)
         return;
     visitLine(coverageData[filename], line, ConstantInt::get(T_int64, 1), "lcnt");
 }
@@ -1417,7 +1417,7 @@ static logdata_t mallocData;
 static void mallocVisitLine(StringRef filename, int line)
 {
     assert(!imaging_mode);
-    if (filename == "" || filename == "none" || filename == "no file" || line < 0) {
+    if (filename == "" || filename == "none" || filename == "no file" || filename == "<missing>" || line < 0) {
         jl_gc_sync_total_bytes();
         return;
     }
@@ -4196,8 +4196,8 @@ static std::unique_ptr<Module> emit_function(jl_lambda_info_t *lam, jl_llvm_func
         if (jl_is_long(a1))
             lno = jl_unbox_long(a1);
     }
-    if (filename.empty())
-        filename = "<missing>";
+    if (lam->def && lam->def->file != empty_sym)
+        filename = jl_symbol_name(lam->def->file);
     ctx.file = filename;
     int toplineno = lno;
 
@@ -4688,41 +4688,33 @@ static std::unique_ptr<Module> emit_function(jl_lambda_info_t *lam, jl_llvm_func
         }
         else if (ctx.debug_enabled && jl_is_expr(stmt) && ((jl_expr_t*)stmt)->head == meta_sym && jl_array_len(((jl_expr_t*)stmt)->args) >= 1) {
             jl_expr_t *stmt_e = (jl_expr_t*)stmt;
-            jl_value_t *meta_arg = jl_cellref(stmt_e->args, 0);
-            if (meta_arg == (jl_value_t*)jl_symbol("push_lambda")) {
-                assert(jl_array_len(stmt_e->args) == 2);
-                jl_value_t *location = (jl_value_t*)jl_cellref(stmt_e->args, 1);
-                if (jl_is_long(location)) { // index in the inlined lambda table
-                    int lambda_idx = jl_unbox_long(location);
-                    jl_lambda_info_t *inlined_lam = (jl_lambda_info_t*)jl_cellref(lam->def->roots, lambda_idx-1);
-                    assert(jl_is_lambda_info(inlined_lam));
-                    DI_sp_stack.push_back(SP);
-                    DI_loc_stack.push_back(builder.getCurrentDebugLocation());
-                    std::string inlined_filename = "<missing>";
-                    if (inlined_lam->file != empty_sym)
-                        inlined_filename = jl_symbol_name(inlined_lam->file);
-                    DIFile *inlined_file = dbuilder.createFile(inlined_filename, ".");
-                    std::string inl_name(jl_symbol_name(inlined_lam->name));
-                    SP = dbuilder.createFunction(inlined_file,
-                                                 inl_name + ";" + std::to_string(lambda_idx),
-                                                 inl_name,
-                                                 inlined_file,
-                                                 0,
-                                                 jl_di_func_sig,
-                                                 false,
-                                                 true,
-                                                 0,
-                                                 0,
-                                                 true,
-                                                 nullptr);
-                    builder.SetCurrentDebugLocation(DebugLoc::get(0, 0, (MDNode*)SP, builder.getCurrentDebugLocation()));
-                } else {
-                    assert(0);
-                    jl_static_show(JL_STDOUT, location);
-                    abort();
-                }
+            jl_value_t *meta_arg = jl_exprarg(stmt_e, 0);
+            if (meta_arg == (jl_value_t*)jl_symbol("push_loc")) {
+                std::string inlined_filename = "<missing>";
+                std::string inl_name = ctx.name;
+                assert(jl_array_len(stmt_e->args) > 1);
+                jl_sym_t *filesym = (jl_sym_t*)jl_exprarg(stmt_e, 1);
+                inlined_filename = jl_symbol_name(filesym);
+                if (jl_array_len(stmt_e->args) > 2)
+                    inl_name = jl_symbol_name((jl_sym_t*)jl_exprarg(stmt_e, 2));
+                DI_sp_stack.push_back(SP);
+                DI_loc_stack.push_back(builder.getCurrentDebugLocation());
+                DIFile *inlined_file = dbuilder.createFile(inlined_filename, ".");
+                SP = dbuilder.createFunction(inlined_file,
+                                             inl_name + ";",
+                                             inl_name,
+                                             inlined_file,
+                                             0,
+                                             jl_di_func_sig,
+                                             false,
+                                             true,
+                                             0,
+                                             0,
+                                             true,
+                                             nullptr);
+                builder.SetCurrentDebugLocation(DebugLoc::get(0, 0, (MDNode*)SP, builder.getCurrentDebugLocation()));
             }
-            else if (meta_arg == (jl_value_t*)jl_symbol("pop_lambda")) {
+            else if (meta_arg == (jl_value_t*)jl_symbol("pop_loc")) {
                 SP = DI_sp_stack.back();
                 DI_sp_stack.pop_back(); // because why not make pop a void function
                 builder.SetCurrentDebugLocation(DI_loc_stack.back());

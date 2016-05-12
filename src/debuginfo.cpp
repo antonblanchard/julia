@@ -51,6 +51,7 @@ using namespace llvm;
 #ifdef _OS_LINUX_
 #  define UNW_LOCAL_ONLY
 #  include <libunwind.h>
+#  include <link.h>
 #endif
 
 #include <string>
@@ -682,11 +683,8 @@ static int lookup_pointer(DIContext *context, jl_frame_t **frames,
             if (outer_linfo) {
                 std::size_t semi_pos = func_name.find(';');
                 if (semi_pos != std::string::npos) {
-                    // we got an index in the inlined lambda array
-                    int inl_idx = std::stoi(func_name.substr(semi_pos+1, std::string::npos));
                     func_name = func_name.substr(0, semi_pos);
-                    assert(1 <= inl_idx && inl_idx <= jl_array_len(outer_linfo->def->roots));
-                    frame->linfo = (jl_lambda_info_t*)jl_cellref(outer_linfo->def->roots, inl_idx-1);
+                    frame->linfo = NULL; // TODO
                 }
             }
         }
@@ -771,10 +769,6 @@ extern "C" void jl_register_fptrs(uint64_t sysimage_base, void **fptrs, jl_lambd
     sysimg_fvars_linfo = linfos;
     sysimg_fvars_n = n;
 }
-
-#ifdef _OS_LINUX_
-#include <link.h>
-#endif
 
 bool jl_dylib_DI_for_fptr(size_t pointer, const llvm::object::ObjectFile **obj, llvm::DIContext **context, int64_t *slide, int64_t *section_slide,
     bool onlySysImg, bool *isSysImg, void **saddr, char **name, char **filename)

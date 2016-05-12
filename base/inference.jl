@@ -2271,23 +2271,6 @@ end
 
 #### post-inference optimizations ####
 
-function add_inlined_loc!(enclosing::LambdaInfo, data::LambdaInfo)
-    if !isdefined(enclosing.def, :roots)
-        enclosing.def.roots = Any[data]
-        1
-    else
-        il = enclosing.def.roots::Vector{Any}
-        # TODO if the quadratic lookup ends up being too expensive we could build a lookup hash before starting the inlining
-        for i=1:length(il)
-            if il[i] === data
-                return i
-            end
-        end
-        push!(il, data)
-        length(il)
-    end
-end
-
 # inline functions whose bodies are "inline_worthy"
 # where the function body doesn't contain any argument more than once.
 # static parameters are ok if all the static parameter values are leaf types,
@@ -2648,9 +2631,6 @@ function inlineable(f::ANY, ft::ANY, e::Expr, atypes::Vector{Any}, sv::Inference
             newlabel = genlabel(sv)
             newlabels[a.label+1] = newlabel.label
             body.args[i] = newlabel
-        elseif isa(a,Expr) && a.head === :meta && a.args[1] === :push_lambda
-            inlined_idx = a.args[2]::Int
-            a.args[2] = add_inlined_loc!(enclosing, linfo.def.roots[inlined_idx])
         end
     end
     for i = 1:length(body.args)
@@ -2721,9 +2701,8 @@ function inlineable(f::ANY, ft::ANY, e::Expr, atypes::Vector{Any}, sv::Inference
        if all(stmt -> isa(stmt,Expr) && stmt.head === :line || isa(stmt, LineNumberNode), stmts)
            empty!(stmts)
        else
-           loc = add_inlined_loc!(enclosing, linfo)
-           unshift!(stmts,Expr(:meta, :push_lambda, loc))
-           push!(stmts, Expr(:meta, :pop_lambda))
+           unshift!(stmts, Expr(:meta, :push_loc, linfo.def.file, linfo.def.name))
+           push!(stmts, Expr(:meta, :pop_loc))
        end
     end
     if !isempty(stmts) && !propagate_inbounds
