@@ -6,7 +6,7 @@ value(x::Period) = x.value
 # The default constructors for Periods work well in almost all cases
 # P(x) = new((convert(Int64,x))
 # The following definitions are for Period-specific safety
-for period in (:Year, :Month, :Week, :Day, :Hour, :Minute, :Second, :Millisecond)
+for period in (:Year, :Month, :Week, :Day, :Hour, :Minute, :Second, :Millisecond, :Microsecond, :Nanosecond)
     period_str = string(period)
     accessor_str = lowercase(period_str)
     # Convenience method for show()
@@ -16,17 +16,20 @@ for period in (:Year, :Month, :Week, :Day, :Hour, :Minute, :Second, :Millisecond
     # AbstractString parsing (mainly for IO code)
     @eval $period(x::AbstractString) = $period(Base.parse(Int64,x))
     # Period accessors
-    typ_str = period in (:Hour, :Minute, :Second, :Millisecond) ? "DateTime" : "TimeType"
-    description = typ_str == "TimeType" ? "`Date` or `DateTime`" : "`$typ_str`"
-    reference = period == :Week ? " For details see [`$accessor_str(::$typ_str)`](:func:`$accessor_str`)." : ""
+    typs = period in (:Microsecond, :Nanosecond) ? ["Time"] : (period in (:Hour, :Minute, :Second, :Millisecond) ? ["DateTime","Time"] : ["TimeType"])
+    description = typs == ["TimeType"] ? "`Date` or `DateTime`" : (typs == ["Time"] ? "`Time`" : "`Time` or `DateTime`")
+    reference = period == :Week ? " For details see [`$accessor_str(::TimeType)`](:func:`$accessor_str`)." : ""
+    for typ_str in typs
+        @eval begin
+            @doc """
+                $($period_str)(dt::$($typ_str)) -> $($period_str)
+
+            The $($accessor_str) part of a $($description) as a `$($period_str)`.$($reference)
+            """ ->
+            $period(dt::$(Symbol(typ_str))) = $period($(Symbol(accessor_str))(dt))
+        end
+    end
     @eval begin
-        @doc """
-            $($period_str)(dt::$($typ_str)) -> $($period_str)
-
-        The $($accessor_str) part of a $($description) as a `$($period_str)`.$($reference)
-        """ ->
-        $period(dt::$(Symbol(typ_str))) = $period($(Symbol(accessor_str))(dt))
-
         @doc """
             $($period_str)(v)
 
@@ -125,15 +128,28 @@ periodisless(::Period,::Hour)        = false
 periodisless(::Minute,::Hour)        = true
 periodisless(::Second,::Hour)        = true
 periodisless(::Millisecond,::Hour)   = true
+periodisless(::Microsecond,::Hour)   = true
+periodisless(::Nanosecond,::Hour)    = true
 periodisless(::Period,::Minute)      = false
 periodisless(::Second,::Minute)      = true
 periodisless(::Millisecond,::Minute) = true
+periodisless(::Microsecond,::Minute) = true
+periodisless(::Nanosecond,::Minute)  = true
 periodisless(::Period,::Second)      = false
 periodisless(::Millisecond,::Second) = true
+periodisless(::Microsecond,::Second) = true
+periodisless(::Nanosecond,::Second)  = true
 periodisless(::Period,::Millisecond) = false
+periodisless(::Microsecond,::Millisecond) = true
+periodisless(::Nanosecond,::Millisecond)  = true
+periodisless(::Period,::Microsecond)      = false
+periodisless(::Nanosecond,::Microsecond)  = true
+periodisless(::Period,::Nanosecond)       = false
 
 # return (next coarser period, conversion factor):
 coarserperiod{P<:Period}(::Type{P}) = (P,1)
+coarserperiod(::Type{Nanosecond}) = (Microsecond,1000)
+coarserperiod(::Type{Microsecond}) = (Millisecond,1000)
 coarserperiod(::Type{Millisecond}) = (Second,1000)
 coarserperiod(::Type{Second}) = (Minute,60)
 coarserperiod(::Type{Minute}) = (Hour,60)
@@ -368,7 +384,7 @@ end
 
 # Fixed-value Periods (periods corresponding to a well-defined time interval,
 # as opposed to variable calendar intervals like Year).
-typealias FixedPeriod Union{Week,Day,Hour,Minute,Second,Millisecond}
+typealias FixedPeriod Union{Week,Day,Hour,Minute,Second,Millisecond,Microsecond,Nanosecond}
 
 # like div but throw an error if remainder is nonzero
 function divexact(x,y)
@@ -378,7 +394,7 @@ function divexact(x,y)
 end
 
 # FixedPeriod conversions and promotion rules
-const fixedperiod_conversions = [(Week,7),(Day,24),(Hour,60),(Minute,60),(Second,1000),(Millisecond,1)]
+const fixedperiod_conversions = [(Week,7),(Day,24),(Hour,60),(Minute,60),(Second,1000),(Millisecond,1000),(Microsecond,1000),(Nanosecond,1)]
 for i = 1:length(fixedperiod_conversions)
     (T,n) = fixedperiod_conversions[i]
     N = 1
@@ -426,7 +442,10 @@ toms(c::Day)         = 86400000*value(c)
 toms(c::Week)        = 604800000*value(c)
 toms(c::Month)       = 86400000.0*30.436875*value(c)
 toms(c::Year)        = 86400000.0*365.2425*value(c)
-toms(c::CompoundPeriod) = isempty(c.periods)?0.0 : Float64(sum(toms,c.periods))
+toms(c::CompoundPeriod) = isempty(c.periods)? 0.0 : Float64(sum(toms,c.periods))
+tons(x)              = Dates.toms(x) * 1000000
+tons(x::Microsecond) = value(x) * 1000
+tons(x::Nanosecond)  = value(x)
 days(c::Millisecond) = div(value(c),86400000)
 days(c::Second)      = div(value(c),86400)
 days(c::Minute)      = div(value(c),1440)
