@@ -8,6 +8,9 @@
 (+)(x::TimeType) = x
 (-){T<:TimeType}(x::T,y::T) = x.instant - y.instant
 
+# Time arithmetic
+(+)(x::Time,y::Time) = Time(Nanosecond(+(value(x),value(y))))
+
 # TimeType-Year arithmetic
 function (+)(dt::DateTime,y::Year)
     oy,m,d = yearmonthday(dt); ny = oy+value(y); ld = daysinmonth(ny,m)
@@ -63,6 +66,8 @@ end
 (-)(x::Date,y::Day)  = return Date(UTD(value(x) - value(y)))
 (+)(x::DateTime,y::Period)   = return DateTime(UTM(value(x)+toms(y)))
 (-)(x::DateTime,y::Period)   = return DateTime(UTM(value(x)-toms(y)))
+(+)(x::Time,y::TimePeriod)   = return Time(Nanosecond(value(x)+tons(y)))
+(-)(x::Time,y::TimePeriod)   = return Time(Nanosecond(value(x)-tons(y)))
 (+)(y::Period,x::TimeType) = x + y
 (-)(y::Period,x::TimeType) = x - y
 
