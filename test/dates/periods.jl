@@ -301,6 +301,8 @@ dt = Dates.DateTime(2014)
 @test typeof(Dates.Minute(dt)) <: Dates.Minute
 @test typeof(Dates.Second(dt)) <: Dates.Second
 @test typeof(Dates.Millisecond(dt)) <: Dates.Millisecond
+@test typeof(Dates.Microsecond(dt)) <: Dates.Microsecond
+@test typeof(Dates.Nanosecond(dt)) <: Dates.Nanosecond
 
 # Default values
 @test Dates.default(Dates.Year) == y
