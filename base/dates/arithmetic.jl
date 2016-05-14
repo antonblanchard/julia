@@ -8,8 +8,20 @@
 (+)(x::TimeType) = x
 (-){T<:TimeType}(x::T,y::T) = x.instant - y.instant
 
-# Time arithmetic
-(+)(x::Time,y::Time) = Time(Nanosecond(+(value(x),value(y))))
+# Date-Time arithmetic
+"""
+    dt::Date + t::Time -> DateTime
+
+The addition of a `Date` with a `Time` produces a `DateTime`. The hour, minute, second, and millisecond parts of
+the `Time` are used along with the year, month, and day of the `Date` to create the new `DateTime`.
+Non-zero microseconds or nanoseconds in the `Time` type will result in an `InexactError` being throw.
+"""
+function (+)(dt::Date,t::Time)
+    (microsecond(t) > 0 || nanosecond(t) > 0) && throw(InexactError())
+    y,m,d = yearmonthday(dt)
+    return DateTime(y,m,d,hour(t),minute(t),second(t),millisecond(t))
+end
+(+)(t::Time,dt::Date) = dt + t
 
 # TimeType-Year arithmetic
 function (+)(dt::DateTime,y::Year)

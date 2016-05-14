@@ -421,3 +421,12 @@ cpa = [1y+1s 1m+1s 1w+1s 1d+1s; 1h+1s 1mi+1s 2m+1s 1s+1ms]
 
 @test [1y+1s 1m+1s; 1w+1s 1d+1s] + [1y+1h 1y+1mi; 1y+1s 1y+1ms] == [2y+1h+1s 1y+1m+1mi+1s; 1y+1w+2s 1y+1d+1s+1ms]
 @test [1y+1s 1m+1s; 1w+1s 1d+1s] - [1y+1h 1y+1mi; 1y+1s 1y+1ms] == [1s-1h 1m+1s-1y-1mi; 1w-1y 1d+1s-1y-1ms]
+
+t = Dates.Time(23,59,59,100,99,98)
+c = Dates.CompoundPeriod(t)
+@test c.periods[1] == Dates.Hour(23)
+@test c.periods[2] == Dates.Minute(59)
+@test c.periods[3] == Dates.Second(59)
+@test c.periods[4] == Dates.Millisecond(100)
+@test c.periods[5] == Dates.Microsecond(99)
+@test c.periods[6] == Dates.Nanosecond(98)

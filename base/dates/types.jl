@@ -183,12 +183,12 @@ function Date(periods::Period...)
 end
 
 """
-    Time(period::Period...) -> Time
+    Time(period::TimePeriod...) -> Time
 
 Construct a `Time` type by `Period` type parts. Arguments may be in any order. `Time` parts
 not provided will default to the value of `Dates.default(period)`.
 """
-function Time(periods::Period...)
+function Time(periods::TimePeriod...)
     h = Hour(0); mi = Minute(0); s = Second(0)
     ms = Millisecond(0); us = Microsecond(0); ns = Nanosecond(0)
     for p in periods
