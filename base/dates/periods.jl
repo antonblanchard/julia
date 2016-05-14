@@ -308,8 +308,8 @@ julia> Dates.CompoundPeriod(Dates.Minute(50000)))
 """
 CompoundPeriod{P<:Period}(p::Vector{P}) = CompoundPeriod(Array{Period}(p))
 
-CompounPeriod(t::Time) = CompoundPeriod(Period[hour(t),minute(t),second(t),millisecond(t),
-                                               microsecond(t),nanosecond(t)])
+CompoundPeriod(t::Time) = CompoundPeriod(Period[Hour(t),Minute(t),Second(t),Millisecond(t),
+                                               Microsecond(t),Nanosecond(t)])
 
 Base.convert(::Type{CompoundPeriod}, x::Period) = CompoundPeriod(Period[x])
 function Base.string(x::CompoundPeriod)

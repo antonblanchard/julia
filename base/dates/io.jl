@@ -28,7 +28,7 @@ function Base.string(t::Time)
     mii = lpad(mi,2,"0")
     ss = lpad(s,2,"0")
     nss = tons(Millisecond(t)) + tons(Microsecond(t)) + tons(Nanosecond(t))
-    ns = nss == 0 ? "" : @sprintf("%.9f", nss/1e+9)[2:end]
+    ns = nss == 0 ? "" : rstrip(@sprintf("%.9f", nss/1e+9)[2:end],'0')
     return "$hh:$mii:$ss$(ns)"
 end
 Base.show(io::IO,x::Time) = print(io,string(x))

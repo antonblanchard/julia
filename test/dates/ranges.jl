@@ -112,7 +112,7 @@ function test_all_combos()
             end
         end
         if T == Dates.DateTime
-            for P in subtypes(Dates.TimePeriod)
+            for P in (Dates.Hour,Dates.Minute,Dates.Second,Dates.Millisecond)
                 for pos_step in (P(1),P(2),P(50),P(2048),P(10000))
                     # empty range
                     dr = f1:pos_step:l1
@@ -439,6 +439,7 @@ a = Dates.Time(23,1,1)
 @test length(typemin(Dates.DateTime):Dates.Second(1):typemax(Dates.DateTime)) == 9223372017043200
 @test length(typemin(DateTime):Dates.Millisecond(1):typemax(DateTime)) == 9223372017043199001
 
+a = Dates.Date(2013,1,1)
 c = Dates.Date(2013,6,1)
 @test length(a:Dates.Month(1):c) == 6
 @test [a:Dates.Month(1):c;] == [a + Dates.Month(1)*i for i in 0:5]
