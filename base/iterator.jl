@@ -21,17 +21,42 @@ enumerate(itr) = Enumerate(itr)
 
 length(e::Enumerate) = length(e.itr)
 size(e::Enumerate) = size(e.itr)
-start(e::Enumerate) = (1, start(e.itr))
-function next(e::Enumerate, state)
+@inline start(e::Enumerate) = (1, start(e.itr))
+@inline function next(e::Enumerate, state)
     n = next(e.itr,state[2])
     (state[1],n[1]), (state[1]+1,n[2])
 end
-done(e::Enumerate, state) = done(e.itr, state[2])
+@inline done(e::Enumerate, state) = done(e.itr, state[2])
 
 eltype{I}(::Type{Enumerate{I}}) = Tuple{Int, eltype(I)}
 
 iteratorsize{I}(::Type{Enumerate{I}}) = iteratorsize(I)
 iteratoreltype{I}(::Type{Enumerate{I}}) = iteratoreltype(I)
+
+# visit
+# visit is like enumerate, except rather than counting entries it
+# returns the index associated with each entry
+
+immutable Visit{I,A<:AbstractArray}
+    data::A
+    itr::I
+end
+visit(A::AbstractArray) = Visit(A, eachindex(A))
+
+length(v::Visit) = length(v.itr)
+size(v::Visit) = size(v.itr)
+@inline start(v::Visit) = start(v.itr)
+@inline function next(v::Visit, state)
+    indx, n = next(v.itr, state)
+    @inbounds item = v.data[indx]
+    (indx, item), n
+end
+@inline done(v::Visit, state) = done(v.itr, state)
+
+eltype{I,A}(::Type{Visit{I,A}}) = Tuple{eltype(I), eltype(A)}
+
+iteratorsize{I}(::Type{Visit{I}}) = iteratorsize(I)
+iteratoreltype{I}(::Type{Visit{I}}) = iteratoreltype(I)
 
 # zip
 
