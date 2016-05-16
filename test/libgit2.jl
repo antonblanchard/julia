@@ -360,6 +360,9 @@ mktempdir() do dir
             LibGit2.branch!(repo, test_branch)
             @test_throws LibGit2.Error.GitError LibGit2.merge!(repo, fastforward=true)
 
+            # Try rebasing on master instead
+            LibGit2.rebase!(repo, "master")
+
             # Switch to the master branch
             LibGit2.branch!(repo, "master")
 
