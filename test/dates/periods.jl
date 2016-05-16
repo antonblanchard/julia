@@ -325,11 +325,11 @@ dt = Dates.DateTime(2014)
 @test Dates.tons(ns) == Dates.value(Dates.Nanosecond(ns)) == 1
 @test Dates.tons(us) == Dates.value(Dates.Nanosecond(us)) == 1000
 @test Dates.tons(ms) == Dates.value(Dates.Nanosecond(ms)) == 1000000
-@test Dates.tons(s)  == Dates.value(Dates.Nanosecond(s)) == 1000000000
-@test Dates.tons(mi) == Dates.value(Dates.Nanosecond(mi)) == 60000000000
-@test Dates.tons(h)  == Dates.value(Dates.Nanosecond(h)) == 3600000000000
-@test Dates.tons(d)  == Dates.value(Dates.Nanosecond(d)) == 86400000000000
-@test Dates.tons(w)  == Dates.value(Dates.Nanosecond(w)) == 604800000000000
+@test Dates.tons(s)  == Dates.value(Dates.Nanosecond(s))  == 1000000000
+@test Dates.tons(mi) == Dates.value(Dates.Nanosecond(mi)) == Int64(60000000000)
+@test Dates.tons(h)  == Dates.value(Dates.Nanosecond(h))  == Int64(3600000000000)
+@test Dates.tons(d)  == Dates.value(Dates.Nanosecond(d))  == Int64(86400000000000)
+@test Dates.tons(w)  == Dates.value(Dates.Nanosecond(w))  == Int64(604800000000000)
 
 @test Dates.days(ms) == Dates.days(s) == Dates.days(mi) == Dates.days(h) == 0
 @test Dates.days(Dates.Millisecond(86400000)) == 1
