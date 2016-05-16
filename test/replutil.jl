@@ -70,6 +70,19 @@ for f in [getindex, setindex!]
     test_have_color(buf, "", "")
 end
 
+type PR16155
+    a::Int64
+    b
+end
+
+Base.show_method_candidates(buf, MethodError(PR16155,(1.0, 2.0, Int64(3))))
+test_have_color(buf, "\e[0m\nClosest candidates are:\n  PR16155(::Any, ::Any)\n  PR16155(\e[1m\e[31m::Int64\e[0m, ::Any)\n  PR16155{T}(::Any)\e[0m",
+                     "\nClosest candidates are:\n  PR16155(::Any, ::Any)\n  PR16155(!Matched::Int64, ::Any)\n  PR16155{T}(::Any)")
+
+Base.show_method_candidates(buf, MethodError(PR16155,(Int64(3), 2.0, Int64(3))))
+test_have_color(buf, "\e[0m\nClosest candidates are:\n  PR16155(::Int64, ::Any)\n  PR16155(::Any, ::Any)\n  PR16155{T}(::Any)\e[0m",
+                     "\nClosest candidates are:\n  PR16155(::Int64, ::Any)\n  PR16155(::Any, ::Any)\n  PR16155{T}(::Any)")
+
 macro except_str(expr, err_type)
     return quote
         let err = nothing
@@ -200,7 +213,7 @@ let undefvar
     err_str = @except_str read(IOBuffer(), UInt8) EOFError
     @test err_str == "EOFError: read end of file"
     err_str = @except_str Dict()[:doesnotexist] KeyError
-    @test err_str == "KeyError: doesnotexist not found"
+    @test err_str == "KeyError: key :doesnotexist not found"
     err_str = @except_str throw(InterruptException()) InterruptException
     @test err_str == "InterruptException:"
     err_str = @except_str throw(ArgumentError("not an error")) ArgumentError

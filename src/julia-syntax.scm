@@ -791,7 +791,7 @@
         (block
          (global ,name) (const ,name)
          ,@(map (lambda (v) `(local ,v)) params)
-         ,@(map make-assignment params (symbols->typevars params bounds #t))
+         ,@(map make-assignment params (symbols->typevars params bounds #f))
          (composite_type ,name (call (core svec) ,@params)
                          (call (core svec) ,@(map (lambda (x) `',x) field-names))
                          ,super (call (core svec) ,@field-types) ,mut ,min-initialized)))
@@ -1174,7 +1174,7 @@
                 ,@(map (lambda (v) `(local ,v)) params)
                 ,@(map (lambda (l r) (make-assignment l (expand-forms r)))
                        params
-                       (symbols->typevars params bounds #t))
+                       (symbols->typevars params bounds #f))
                 (call (core TypeConstructor)
                       (call (core svec) ,@params)
                       ,(expand-forms type-ex))))))))
@@ -2487,7 +2487,7 @@ f(x) = yt(x)
         ((,@(map (lambda (p) `(,p Any 18)) P))
          () 0 ())
         (body (global ,name) (const ,name)
-              ,@(map (lambda (p) `(= ,p (call (core TypeVar) ',p (core Any) true))) P)
+              ,@(map (lambda (p) `(= ,p (call (core TypeVar) ',p (core Any) false))) P)
               (composite_type ,name (call (core svec) ,@P)
                               (call (core svec) ,@(map (lambda (v) `',v) fields))
                               ,super
@@ -2620,11 +2620,25 @@ f(x) = yt(x)
                          '())))
                  args)))))
 
+(define (take-statements-while pred body)
+  (let ((acc '()))
+    (define (take expr)
+      ;; returns #t as long as exprs match and we should continue
+      (cond ((and (pair? expr) (memq (car expr) '(block body)))
+             (let loop ((xs (cdr expr)))
+               (cond ((null? xs) #t)
+                     ((take (car xs)) (loop (cdr xs)))
+                     (else #f))))
+            ((pred expr)
+             (set! acc (cons expr acc))
+             #t)
+            (else #f)))
+    (take body)
+    (reverse! acc)))
+
 ;; clear capture bit for vars assigned once at the top, to avoid allocating
 ;; some unnecessary Boxes.
 (define (lambda-optimize-vars! lam)
-  ;; flattening blocks helps us find more dominating statements
-  (set-car! (cdddr lam) (flatten-blocks (lam:body lam)))
   (define (expr-uses-var ex v)
     (cond ((assignment? ex) (expr-contains-eq v (caddr ex)))
           ((eq? (car ex) 'method)
@@ -2638,15 +2652,16 @@ f(x) = yt(x)
         (let* ((leading
                 (filter (lambda (x) (and (pair? x)
                                          (or (and (eq? (car x) 'method)
-                                                  (length> (car x) 2))
+                                                  (length> x 2))
                                              (eq? (car x) '=))))
-                        (take-while (lambda (e)
-                                      (or (atom? e)
-                                          (memq (car e) '(quote top core line inert local
-                                                          meta inbounds boundscheck simdloop
-                                                          implicit-global global globalref
-                                                          const newvar = null method))))
-                                    (lam:body lam))))
+                        (take-statements-while
+                         (lambda (e)
+                           (or (atom? e)
+                               (memq (car e) '(quote top core line inert local
+                                               meta inbounds boundscheck simdloop
+                                               implicit-global global globalref
+                                               const newvar = null method))))
+                         (lam:body lam))))
                (unused (map cadr leading))
                (def (table)))
           ;; TODO: reorder leading statements to put assignments where the RHS is

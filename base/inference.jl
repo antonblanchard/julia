@@ -374,13 +374,7 @@ function type_depth(t::ANY)
         t === Bottom && return 0
         return maximum(type_depth, t.types) + 1
     elseif isa(t, DataType)
-        t = t::DataType
-        P = t.parameters
-        isempty(P) && return 0
-        if t.depth == 0
-            t.depth = maximum(type_depth, P) + 1
-        end
-        return t.depth
+        return (t::DataType).depth
     end
     return 0
 end
@@ -1403,7 +1397,7 @@ function unshare_linfo!(li::LambdaInfo)
     if !isa(li.code, Array{Any,1})
         li.code = ccall(:jl_uncompress_ast, Any, (Any,Any), li, li.code)
     else
-        li.code = astcopy(li.code)
+        li.code = copy_exprargs(li.code)
     end
     li.slotnames = copy(li.slotnames)
     li.slotflags = copy(li.slotflags)
@@ -2463,7 +2457,7 @@ function inlineable(f::ANY, ft::ANY, e::Expr, atypes::Vector{Any}, sv::Inference
     if !isa(ast,Array{Any,1})
         ast = ccall(:jl_uncompress_ast, Any, (Any,Any), linfo, ast)
     else
-        ast = astcopy(ast)
+        ast = copy_exprargs(ast)
     end
     ast = ast::Array{Any,1}
 

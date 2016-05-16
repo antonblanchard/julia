@@ -1276,14 +1276,18 @@ static uint64_t compute_obj_symsize(const object::ObjectFile *obj, uint64_t offs
             uint64_t Addr;
             object::section_iterator Sect = ESection;
 #ifdef LLVM38
-            Sect = Sym.getSection().get();
+            auto SectOrError = Sym.getSection();
+            assert(SectOrError);
+            Sect = SectOrError.get();
 #else
             if (Sym.getSection(Sect)) continue;
 #endif
             if (Sect == ESection) continue;
             if (Sect != Section) continue;
 #ifdef LLVM37
-            Addr = Sym.getAddress().get();
+            auto AddrOrError = Sym.getAddress();
+            assert(AddrOrError);
+            Addr = AddrOrError.get();
 #else
             if (Sym.getAddress(Addr)) continue;
 #endif
@@ -5672,8 +5676,6 @@ static inline SmallVector<std::string,10> getTargetFeatures() {
     return attr;
 }
 
-extern "C" void jl_init_debuginfo(void);
-
 extern "C" void jl_init_codegen(void)
 {
     const char *const argv_tailmerge[] = {"", "-enable-tail-merge=0"}; // NOO TOUCHIE; NO TOUCH! See #922
@@ -5692,6 +5694,7 @@ extern "C" void jl_init_codegen(void)
     imaging_mode = jl_generating_output();
 #endif
     jl_init_debuginfo();
+    jl_init_runtime_ccall();
 
 #ifndef LLVM34
     // this option disables LLVM's signal handlers

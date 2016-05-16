@@ -437,6 +437,13 @@ Yc(f) = (h->f(x->h(h)(x)))(h->f(x->h(h)(x)))
 yfib = Yc(fib->(n->(n < 2 ? n : fib(n-1) + fib(n-2))))
 @test yfib(20) == 6765
 
+function capt_before_def()
+    f() = y
+    y = 2
+    f
+end
+@test capt_before_def()() == 2
+
 # variable scope, globals
 glob_x = 23
 function glotest()
@@ -4112,6 +4119,14 @@ f16090() = typeof(undefined_x16090::Tuple{Type{Int}})
 @test_throws UndefVarError f16090()
 undefined_x16090 = (Int,)
 @test_throws TypeError f16090()
+
+# issue #12238
+type A12238{T} end
+type B12238{T,S}
+    a::A12238{B12238{Int,S}}
+end
+@test B12238.types[1] === A12238{B12238{Int}}
+@test A12238{B12238{Int}}.instance === B12238.types[1].instance
 
 # issue #16315
 let a = Any[]
