@@ -64,11 +64,65 @@ end
 
 hash(x::QuoteNode, h::UInt) = hash(x.value, hash(QuoteNode, h))
 
-# hashing ranges by component at worst leads to collisions for very similar ranges
-const hashr_seed = UInt === UInt64 ? 0x80707b6821b70087 : 0x21b70087
+## hashing collections ##
+
+const hashaa_seed = UInt === UInt64 ? 0x7f53e68ceb575e76 : 0xeb575e76
+const hashrle_seed = UInt == UInt64 ? 0x2aab8909bfea414c : 0xbfea414c
+function hash(a::AbstractArray, h::UInt)
+    h += hashaa_seed
+    h += hash(size(a))
+
+    state = start(a)
+    done(a, state) && return h
+    x1, state = next(a, state)
+    # Always hash the first element
+    h = hash(x1, h)
+    done(a, state) && return h
+
+    # Then hash the difference between two subsequent elements when - is supported,
+    # or the elements themselves when not
+    x2, state = next(a, state)
+    v2 = applicable(-, x2, x1) ? x2 - x1 : x2
+    done(a, state) && return hash(v2, h)
+
+    v1 = v2
+    while !done(a, state)
+        x1 = x2
+        x2, state = next(a, state)
+        v1 = v2
+        v2 = applicable(-, x2, x1) ? x2 - x1 : x2
+        if isequal(v2, v1)
+            # For repeated elements, use run length encoding
+            # This allows efficient hashing of sparse arrays
+            runlength = 2
+            while !done(a, state)
+                x1 = x2
+                x2, state = next(a, state)
+                v2 = applicable(-, x2, x1) ? x2 - x1 : x2
+                isequal(v1, v2) || break
+                runlength += 1
+            end
+            h += hashrle_seed
+            h = hash(runlength, h)
+        end
+        h = hash(v1, h)
+    end
+    !isequal(v2, v1) && (h = hash(v2, h))
+    return h
+end
+
 function hash(r::Range, h::UInt)
-    h += hashr_seed
+    h += hashaa_seed
+    h += hash(size(r))
+
+    length(r) == 0 && return h
+
     h = hash(first(r), h)
-    h = hash(step(r), h)
-    h = hash(last(r), h)
+    length(r) == 1 && return h
+
+    length(r) == 2 && return hash(step(r), h)
+
+    h += hashrle_seed
+    h = hash(length(r)-1, h)
+    hash(step(r), h)
 end

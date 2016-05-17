@@ -66,13 +66,20 @@ vals = Any[
     Dict(42 => 101, 77 => 93), Dict{Any,Any}(42 => 101, 77 => 93),
     (1,2,3,4), (1.0,2.0,3.0,4.0), (1,3,2,4),
     ("a","b"), (SubString("a",1,1), SubString("b",1,1)),
+    ['a', 'b', 'c', 'd', 'e'],
     # issue #6900
     [x => x for x in 1:10],
     Dict(7=>7,9=>9,4=>4,10=>10,2=>2,3=>3,8=>8,5=>5,6=>6,1=>1),
     [], [1], [2], [1, 1], [1, 2], [1, 3], [2, 2], [1, 2, 2], [1, 3, 3],
     zeros(2, 2), spzeros(2, 2), eye(2, 2), speye(2, 2),
     sparse(ones(2, 2)), ones(2, 2), sparse([0 0; 1 0]), [0 0; 1 0],
-    [-0. 0; -0. 0.], SparseMatrixCSC(2, 2, [1, 3, 3], [1, 2], [-0., -0.])
+    [-0. 0; -0. 0.], SparseMatrixCSC(2, 2, [1, 3, 3], [1, 2], [-0., -0.]),
+    # issue #16364
+    1:4, 1:1:4, 1:-1:0, 1.0:4.0, 1.0:1.0:4.0, 'a':'e',
+    linspace(1, 3, 10), collect(linspace(1, 3, 10)),
+    # check that hash is still consistent with heteregeneous arrays for which - is defined
+    # for some pairs and not others (no element must be ignored)
+    ["a", "b", 1, 2], ["a", 1, 2], ["a", "b", 2, 2], ["a", "a", 1, 2], ["a", "b", 2, 3]
 ]
 
 for a in vals, b in vals
